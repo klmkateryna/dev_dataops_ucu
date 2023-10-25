@@ -1,0 +1,35 @@
+# Stage 1: Build the application
+FROM python:3.11 AS builder
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the dependencies file and application code to the working directory
+COPY . .
+
+# Create and activate the virtual environment. Install dependencies file
+RUN python3 -m venv ./venv
+RUN . ./venv/bin/activate && \
+python3 -m ensurepip --upgrade && \
+python3 -m pip install -r ./requirements.txt
+
+
+
+# Stage 2: Run the application
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
+
+# Add group and user to run a container
+RUN groupadd -r webservice_user && useradd --no-log-init -r -g webservice_user webservice_user
+
+# Copy only the built application and its dependencies from the previous stage
+COPY --from=builder /app .
+
+USER webservice_user:webservice_user
+
+# Expose the port on which the application will run
+EXPOSE 8080
+
+# Define the command to run the application
+CMD ["./venv/bin/python", "server.py"]
